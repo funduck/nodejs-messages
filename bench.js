@@ -21,18 +21,18 @@ const genArgs = function (S, N, J) {
 };
 
 const args = function () {
-    return genArgs(3, 3, 1);
+    return genArgs(2, 2, 1);
 }
 
 const Test1 = function (callback) {
-    console.error('Comparing pure console.log() with console.log(new Message())');
-    console.error('Messages format: key=val key=val ...');
-
     Messages.setFormat({
         fields: [],
         elastic: false
     });
 
+    console.error('Comparing pure console.log() printing:\n', ...args());
+    console.error('with console.log(new Message()) printing:\n', new Messages.Message(...args()).toString());
+
     const suite = new Benchmark.Suite;
     // add tests
     suite.add('console.log(array of arguments)', function() {
@@ -50,24 +50,24 @@ const Test1 = function (callback) {
         if (callback) callback();
     })
     // run async
-    .run({ 'async': true });
+    .run({ async: true });
 };
 
 const Test2 = function (callback) {
-    console.error('Comparing pure console.log() with console.log(new Message())');
-    console.error('Messages format with 2 fixed fields "1" and "2"');
-
     Messages.setFormat({
         fields: [{
-            field: '1',
-            len: 10
+            field: 0,
+            len: 25
         }, {
-            field: '2',
-            len: 10
+            field: 1,
+            len: 25
         }],
         elastic: true
     });
 
+    console.error('Comparing pure console.log() printing:\n', ...args());
+    console.error('with console.log(new Message()) printing:\n', new Messages.Message(...args()).toString());
+
     const suite = new Benchmark.Suite;
     // add tests
     suite.add('console.log(array of arguments)', function() {
@@ -85,10 +85,10 @@ const Test2 = function (callback) {
         if (callback) callback();
     })
     // run async
-    .run({ 'async': true });
+    .run({ async: true });
 };
 
 Test1(function () {
-    console.console.error();
+    console.error();
     Test2();
 });

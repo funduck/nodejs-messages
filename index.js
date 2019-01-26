@@ -83,9 +83,9 @@ class Message extends Map {
             s += ''.padEnd(free, ' ');
         }
         for (let [key, val] of this) {
-            if (!key.match(/^_/) && // keys like "_somePrivate" wont be serialized
-                key != 'muid' &&
-                key != 'rmuid' &&
+            if ((!key.match || !key.match(/^_/)) && // keys like "_somePrivate" wont be serialized
+                key != 'muid' && // muid is positional
+                key != 'rmuid' && // rmuid is positional
                 !Messages._format.keys.get(key) &&
                 val != null &&
                 val != undefined

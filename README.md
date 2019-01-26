@@ -127,6 +127,29 @@ And Message can just store data, without printing it, **all keys starting with _
     F.call(msg, ...args);
     // instead of F(...args);
 
+## Benchmark
+Compared on my laptop to `console.log` it is slower but not dramatically `80,195 ops/sec VS 96,897 ops/sec`
+
+    Comparing pure console.log() printing:
+    0 0.967876549678572 1 0.5166329325932508 2 0.49092531557067565 3 0.8750981266344764 4 { key: 4,
+    value: 0.09689954539560874,
+    date: 2019-01-26T14:38:43.747Z }
+    with console.log(new Message()) printing:
+    0="0.6924179197953284" 1="0.46192706643019643" 2=0.5539190945036634 3=0.6895393555604648 4={"key":4,"value":0.22099125880656678,"date":"2019-01-26T14:38:43.749Z"}
+    console.log(array of arguments) x 96,451 ops/sec ±1.54% (84 runs sampled)
+    console.log(new Message()) x 80,223 ops/sec ±0.69% (89 runs sampled)
+    Fastest is console.log(array of arguments)
+
+    Comparing pure console.log() printing:
+    0 0.7257643828952878 1 0.9633743632909522 2 0.08541227165710619 3 0.7190222820259451 4 { key: 4,
+    value: 0.4385622363869133,
+    date: 2019-01-26T14:38:56.047Z }
+    with console.log(new Message()) printing:
+    0.12645777701909733      0.9914773008978446        2=0.20228763034523944 3=0.5483237610610716 4={"key":4,"value":0.21385680282745057,"date":"2019-01-26T14:38:56.047Z"}
+    console.log(array of arguments) x 96,897 ops/sec ±0.62% (90 runs sampled)
+    console.log(new Message()) x 80,195 ops/sec ±0.73% (93 runs sampled)
+    Fastest is console.log(array of arguments)
+
 ## More
 
 Check out **test** for details
