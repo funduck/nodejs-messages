@@ -83,4 +83,22 @@ describe('Messages', function() {
         const m = new Message('a', 1, 'b', {bar: 'foo'}, 'c', {cat: 'meow'}, '_p', 3.14);
         assert.equal(m.toString(), '1  [object Object] c={"cat":"meow"}');
     });
+
+    it('toString prints "muid" if format has it', () => {
+        Messages.setFormat({
+            fields: [{
+                field: 'muid'
+            }, {
+                field: 'a',
+                len: 3
+            }, {
+                field: 'b',
+                len: 15
+            }],
+            elastic: true
+        });
+        const m = new Message('a', 1, 'b', {bar: 'foo'}, 'c', {cat: 'meow'}, '_p', 3.14);
+        const re = new RegExp('^muid......  1  \\[object Object\\] c={"cat":"meow"}$');
+        assert(m.toString().match(re) != null, '"' + m.toString() + '" not matches "' + re + '"');
+    });
 });
