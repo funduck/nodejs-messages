@@ -1,5 +1,5 @@
 # nodejs-messages
-## Messages keep data for logging and can be a context
+Messages keep data for logging and can be a context
 Instead of writing text or composing a string for log every time one can store data in an object that can compose a string later when needed.  
 The fastest object to store data in JavaScript is a **Map**, so I extended it with
 * setm - set multiple key-value pairs
@@ -7,11 +7,11 @@ The fastest object to store data in JavaScript is a **Map**, so I extended it wi
 * toString - make formatted string out of all keys except **starting with _** using [format](#format)  
 
 ## Test and example
-Run
 
     npm test
     node example.js
 
+## Details 
 ### Message not unique id
 It is useful to track log messages for one call stack, so if [format](#format) contains field **muid** then quasi unique identificator will be generated for every `new Message()`  
 **muid** can be printed only as positional field  
