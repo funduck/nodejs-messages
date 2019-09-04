@@ -3,6 +3,9 @@
 const Benchmark = require('benchmark');
 const Messages = require('./index');
 
+Benchmark.options.minSamples = 100;
+Benchmark.options.initCount = 2;
+
 const genArgs = function (S, N, J) {
     const args = new Array(2*(S + N + J));
     for (let i = 0; i < S; i++) {
@@ -27,7 +30,7 @@ const args = function () {
 const Test1 = function (callback) {
     Messages.setFormat({
         fields: [],
-        elastic: false
+        elasticWidth: false
     });
 
     console.error('Comparing pure console.log() printing:\n', ...args());
@@ -39,7 +42,7 @@ const Test1 = function (callback) {
         console.log(...args());
     })
     .add('console.log(new Message())', function() {
-        console.log(new Messages.Message(...args()));
+        console.log(new Messages.Message(...args()).toString());
     })
     // add listeners
     .on('cycle', function(event) {
@@ -56,13 +59,15 @@ const Test1 = function (callback) {
 const Test2 = function (callback) {
     Messages.setFormat({
         fields: [{
-            field: 0,
-            len: 25
+            name: 'muid'
         }, {
-            field: 1,
-            len: 25
+            name: 0,
+            width: 25
+        }, {
+            name: 1,
+            width: 25
         }],
-        elastic: true
+        elasticWidth: true
     });
 
     console.error('Comparing pure console.log() printing:\n', ...args());
@@ -74,7 +79,7 @@ const Test2 = function (callback) {
         console.log(...args());
     })
     .add('console.log(new Message())', function() {
-        console.log(new Messages.Message(...args()));
+        console.log(new Messages.Message(...args()).toString());
     })
     // add listeners
     .on('cycle', function(event) {

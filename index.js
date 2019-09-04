@@ -1,10 +1,11 @@
 'use strict';
 
 /*
+    Context holder
     Keeps key-value pairs
     has toString() so can be used for logging
     has clone() so can be nested in subroutines
-    can be used as "context" since keys starting with "_" are not stringified in toString()
+    to be used as "context" keys starting with "_" are not used in toString()
 */
 class Message extends Map {
     constructor (...args) {
@@ -20,18 +21,21 @@ class Message extends Map {
             this.setm(...args);
         }
 
-        // message universal id
-        if (!this.get('muid')) {
+        // message universal id - quasi unique message identificator, great to track log messages in call stack
+        if (Messages.useMUID && !this.get('muid')) {
             this.set('muid', Messages._getNextMUID());
         }
 
-        if (Messages._rmuid && !this.get('rmuid')) {
+        // real message universal id - 
+        if (Messages.useRMUID && !this.get('rmuid')) {
             this.set('rmuid', Messages._getNextRMUID());
         }
     }
 
-    /*
+    /**
     Set multiple key-value pairs, for example: setm('a', 1, 'b', 2, 'c', 3)
+    @param {...string|number|object|function} args
+    @return {Message}
     */
     setm (...args) {
         if (args.length == 0) return this;
@@ -47,28 +51,35 @@ class Message extends Map {
         return this;
     }
 
-    /*
-    @return {string} made using all keys except starting with "_", uses Messages._format
+    /**
+    Converts to string
+    Uses all keys except starting with "_"
+    First prints positional fields from Messages._format, then all key-value pairs separated with space
+    @return {string} 
     */
     toString () {
         let key;
         let val;
-        let len;
+        let width;
         let s = '';
         let free = 0;
         let spaceBefore;
-        const fields = Messages._format.fields;
+        const format = Messages._format;
+        
+        // positional fields
+        const fields = format.fields;
         for (let i = 0; i < fields.length; i++) {
-            key = fields[i].field;
+            key = fields[i].name;
             val = String(this.get(key) || '');
-            if (Messages._format.elastic) {
-                len = fields[i].len;
-                if (val.length < len) {
+
+            if (format.elasticWidth) {
+                width = fields[i].width;
+                if (val.length < width) {
                     spaceBefore = ''.padEnd(free, ' ');
-                    free = len - val.length;
+                    free = width - val.length;
                 } else {
                     if (i > 0) {
-                        spaceBefore = ' '.padEnd(free - val.length + len);
+                        spaceBefore = ' '.padEnd(free - val.length + width);
                     } else {
                         spaceBefore = '';
                     }
@@ -76,26 +87,53 @@ class Message extends Map {
                 }
                 s += spaceBefore + val;
             } else {
-                s += val + '\t';
+                s += val + format.positionalSeparator;
             }
         }
-        if (free) {
-            s += ''.padEnd(free, ' ');
+        
+        if (fields.length && format.elasticWidth) {
+            if (free) {
+                s += ''.padEnd(free, ' ');
+            } else {
+                s += format.otherSeparator;
+            }
         }
+        
+        // other fields
+        let separator = '';
         for (let [key, val] of this) {
-            if ((!key.match || !key.match(/^_/)) && // keys like "_somePrivate" wont be serialized
-                key != 'muid' && // muid is positional
-                key != 'rmuid' && // rmuid is positional
-                !Messages._format.keys.get(key) &&
-                val != null &&
-                val != undefined
+            if (
+                // keys like "_withUnderscore" are not serialized
+                (!key.match || !key.match(/^_/)) &&
+                
+                // muid is positional
+                key != 'muid' &&
+                
+                // rmuid is positional
+                key != 'rmuid' &&
+                
+                // other positional
+                !format.fieldNamesMap.get(key) &&
+                
+                val != null
             ) {
-                s += ' ' + key + '=' + JSON.stringify(val);
+                let valString;
+                if (val instanceof Error) {
+                    valString = val.stack;
+                } else {
+                    valString = JSON.stringify(val);
+                }
+                s += separator + key + '=' + valString;
+                separator = format.otherSeparator;
             }
         }
         return s;
     }
 
+    /**
+    Clone
+    @return {Message}
+    */
     clone (...args) {
         const clone = new Message(this);
         if (args.length > 0) {
@@ -107,8 +145,10 @@ class Message extends Map {
 
 const Messages = {
     Message: Message,
+    
+    useMUID: false,
 
-    _rmuid: false,
+    useRMUID: false,
 
     _getNextMUID: function () {
         return  'muid' + new Date().getTime() % 1000000;
@@ -119,15 +159,24 @@ const Messages = {
     },
 
     _format: {
+        // formatting for positional fields: order and width
         fields: [{
-            field: 'where',
-            len: 15
+            name: 'where',
+            width: 15
         }, {
-            field: 'what',
-            len: 23
+            name: 'what',
+            width: 23
         }],
-        keys: new Map([['where', true], ['what', true]]),
-        elastic: true
+        
+        // map of field names
+        fieldNamesMap: new Map([['where', true], ['what', true]]),
+        
+        // should fields have fixed width or it can be adjusted
+        elasticWidth: true,
+        
+        positionalSeparator: '\t',
+        
+        otherSeparator: ' '
     },
 
     // TODO if needed _hiddenFields: new Map(),
@@ -135,23 +184,34 @@ const Messages = {
     setFormat: function (format) {
         const _f = {
             fields: format.fields,
-            keys: new Map(),
-            elastic: format.elastic != null ? format.elastic : true
+            fieldNamesMap: new Map(),
+            elasticWidth: format.elasticWidth != null ? format.elasticWidth : true,
+            positionalSeparator: format.positionalSeparator || '\t',
+            otherSeparator: format.otherSeparator || ' ',
         };
         for (let i = 0; i < format.fields.length; i++) {
-            _f.keys.set(format.fields[i].field, true);
-            if (format.fields[i].field == 'muid' && (format.fields[i].len || 0) < 12) {
-                format.fields[i].len = 12;
+            _f.fieldNamesMap.set(format.fields[i].name, true);
+            
+            // min field width for muid is 12
+            if (format.fields[i].name == 'muid' && (format.fields[i].width || 0) < 12) {
+                format.fields[i].width = 12;
             }
-            if (format.fields[i].len == null) {
-                format.fields[i].len = 10;
+            
+            // default width for any field is 10
+            if (format.fields[i].width == null) {
+                format.fields[i].width = 10;
             }
         }
         Messages._format = _f;
 
-        Messages._rmuid = false;
-        if (Messages._format.keys.get('rmuid')) {
-            Messages._rmuid = true;
+        Messages.useRMUID = false;
+        if (Messages._format.fieldNamesMap.get('rmuid')) {
+            Messages.useRMUID = true;
+        }
+        
+        Messages.useMUID = false;
+        if (Messages._format.fieldNamesMap.get('muid')) {
+            Messages.useMUID = true;
         }
     },
 
@@ -170,16 +230,16 @@ const Messages = {
 // setting default format
 Messages.setFormat({
     fields: [{
-        field: 'muid',
-        len: 12
+        name: 'muid',
+        width: 12
     }, {
-        field: 'where',
-        len: 15
+        name: 'where',
+        width: 15
     }, {
-        field: 'what',
-        len: 23
+        name: 'what',
+        width: 23
     }],
-    elastic: true
+    elasticWidth: true
 });
 
 module.exports = Messages;

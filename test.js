@@ -40,45 +40,64 @@ describe('Messages', function() {
     it('toString', () => {
         Messages.setFormat({
             fields: [{
-                field: 'a',
-                len: 3
+                name: 'a',
+                width: 3
             }, {
-                field: 'b',
-                len: 15
+                name: 'b',
+                width: 15
             }],
-            elastic: true
+            elasticWidth: true
         });
         const m = new Message('a', 1, 'b', {bar: 'foo'}, 'c', {cat: 'meow'});
         assert.equal(m.toString(), '1  [object Object] c={"cat":"meow"}');
     });
 
-    it('elastic formatting in toString', () => {
+    it('elasticWidth formatting in toString', () => {
         Messages.setFormat({
             fields: [{
-                field: 'a',
-                len: 3
+                name: 'a',
+                width: 3
             }, {
-                field: 'b',
-                len: 3
+                name: 'b',
+                width: 3
             }],
-            elastic: true
+            elasticWidth: true
         });
         const m = new Message('a', 1, 'b', '123', 'c', 0);
         assert.equal(m.toString(), '1  123 c=0');
         m.set('b', '1234');
         assert.equal(m.toString(), '1 1234 c=0');
     });
+    
+    it('not elasticWidth formatting in toString', () => {
+        Messages.setFormat({
+            fields: [{
+                name: 'a',
+                width: 3
+            }, {
+                name: 'b',
+                width: 3
+            }],
+            elasticWidth: false,
+            positionalSeparator: '\t',
+            otherSeparator: ' '
+        });
+        const m = new Message('a', 1, 'b', '123', 'c', 0, 'd', 1);
+        assert.equal(m.toString(), '1\t123\tc=0 d=1');
+        m.set('b', '1234');
+        assert.equal(m.toString(), '1\t1234\tc=0 d=1');
+    });
 
     it('toString omits keys starting with "_"', () => {
         Messages.setFormat({
             fields: [{
-                field: 'a',
-                len: 3
+                name: 'a',
+                width: 3
             }, {
-                field: 'b',
-                len: 15
+                name: 'b',
+                width: 15
             }],
-            elastic: true
+            elasticWidth: true
         });
         const m = new Message('a', 1, 'b', {bar: 'foo'}, 'c', {cat: 'meow'}, '_p', 3.14);
         assert.equal(m.toString(), '1  [object Object] c={"cat":"meow"}');
@@ -87,18 +106,28 @@ describe('Messages', function() {
     it('toString prints "muid" if format has it', () => {
         Messages.setFormat({
             fields: [{
-                field: 'muid'
+                name: 'muid'
             }, {
-                field: 'a',
-                len: 3
+                name: 'a',
+                width: 3
             }, {
-                field: 'b',
-                len: 15
+                name: 'b',
+                width: 15
             }],
-            elastic: true
+            elasticWidth: true
         });
         const m = new Message('a', 1, 'b', {bar: 'foo'}, 'c', {cat: 'meow'}, '_p', 3.14);
         const re = new RegExp('^muid......  1  \\[object Object\\] c={"cat":"meow"}$');
+        assert(m.toString().match(re) != null, '"' + m.toString() + '" not matches "' + re + '"');
+    });
+    
+    it('toString prints Error stack', () => {
+        Messages.setFormat({
+            fields: [],
+            elasticWidth: false
+        });
+        const m = new Message('result', new Error('sample error'));
+        const re = new RegExp('result=Error: sample error');
         assert(m.toString().match(re) != null, '"' + m.toString() + '" not matches "' + re + '"');
     });
 });

@@ -3,24 +3,32 @@
 Instead of writing text or composing a string for log every time one can store data in an object that can compose a string later when needed.  
 The fastest object to store data in JavaScript is a **Map**, so I extended it with
 * setm - set multiple key-value pairs
-* clone - make a copy and set multiple key-value pairs
-* toString - make formatted string out of all keys except **starting with _**  
+* clone - make a copy and set multiple key-value pairs if arguments provided
+* toString - make formatted string out of all keys except **starting with _** using [format](#format)  
+
+## Test and example
+Run
+
+    npm test
+    node example.js
 
 ### Message not unique id
-It is useful to track log messages for one call stack, so if [format](#format) contains field **muid** then quasi unique id will be generated for every `new Message()`  
+It is useful to track log messages for one call stack, so if [format](#format) contains field **muid** then quasi unique identificator will be generated for every `new Message()`  
 **muid** can be printed only as positional field  
-It is NOT UNIQUE to be shorter, if a really unique id is required use **rmuid** but it will be generated only for Messages created after format is set and generator is not perfect.
+Note that it is **NOT UNIQUE** to be shorter, if a really unique id is required use **rmuid** but current generator is not perfect.  
+Also note that these ids are generated only if [format](#format) uses them.  
 
 ## Format
 Format object is
 
     {
         fields: [{
-            field: "FIELD NAME",
-            len: SPACE FOR A FIELD
+            name: "FIELD NAME",
+            width: SPACE FOR A FIELD
         }, ...],
-        elastic: BOOLEAN
+        elasticWidth: BOOLEAN
     }
+    
 Fields not mentioned in format are printed like this:
 
     key1=val1 key2=val2 ...
@@ -28,18 +36,19 @@ Fields not mentioned in format are printed like this:
 JSON.stringify() is applied to values
 
 ### Setting format
+
     Messages.setFormat({
         fields: [{
-            field: 'muid',
-            len: 12
+            name: 'muid',
+            width: 12
         }, {
-            field: 'where',
-            len: 15
+            name: 'where',
+            width: 15
         }, {
-            field: 'what',
-            len: 23
+            name: 'what',
+            width: 23
         }],
-        elastic: true
+        elasticWidth: true
     })
 
 That is actually a **default** format
@@ -50,16 +59,16 @@ For example if format is:
 
     {
         fields: [{
-            field: 'where',
-            len: 8
+            name: 'where',
+            width: 8
         }, {
-            field: 'what',
-            len: 9
+            name: 'what',
+            width: 9
         }, {
-            field: 'detail',
-            len: 6
+            name: 'detail',
+            width: 6
         }],
-        elastic: true
+        elasticWidth: true
     }
 
 And Message are
