@@ -1,24 +1,96 @@
 # nodejs-messages
-Messages keep data for logging and can be a context
-Instead of writing text or composing a string for log every time one can store data in an object that can compose a string later when needed.  
+Message keeps data for logging and can be a context.  
+Instead of making a string for log every time one can store data in an object that composes a string later only when needed.  
+What if you have a code like this?
+
+    logger.info('functionCall()')
+    logger.verbose('arguments', ...args)
+    ...
+    logger.debug('result:', result)
+
+If logger has level 'warn' we expect logger calls to be as fast as possible, all of them are *skipped* but we still pass several arguments. What about this line?
+
+    logger.verbose(`let's print date: ${new Date()}`)
+
+It calculates `Date` and converts it to string even if it will not be printed. Could we skip conversion? Yes, if we keep raw data and make strings only if we need them.  
+Message stores data, when we *set* it there. When logger wants to print a Message it should call `toString`, for example trying to convert it to string like this
+
+    String(message)
+
+Then all logger calls will receive only one argument, and there will be conversion to string only if logger is really going to print that message.  
+
 The fastest object to store data in JavaScript is a **Map**, so I extended it with
 * setm - set multiple key-value pairs
 * clone - make a copy and set multiple key-value pairs if arguments provided
 * toString - make formatted string out of all keys except **starting with _** using [format](#format)  
 
-## Test and example
+## Example
+It is always easier to start with example, so run this to see how Message can be used for logging
 
-    npm test
     node example.js
 
-## Details 
-### Message not unique id
-It is useful to track log messages for one call stack, so if [format](#format) contains field **muid** then quasi unique identificator will be generated for every `new Message()`  
-**muid** can be printed only as positional field  
-Note that it is **NOT UNIQUE** to be shorter, if a really unique id is required use **rmuid** but current generator is not perfect.  
-Also note that these ids are generated only if [format](#format) uses them.  
+## Usage
+When processing any tasks usually you have some ID  
+Make initial Message at the start
 
-## Format
+    const msg = new Message('requestId', task.ID)
+
+Print it
+
+    logger.debug(msg);
+
+Or print it with additional info
+
+    logger.debug(msg.clone('what', 'request accepted');
+
+Later you can print it changing that info
+
+    logger.debug(msg.clone('what', 'processing request');
+
+You can some functions and pass task *context* in there  
+
+    function F(inMsg, ...args) {
+        // better don't change original Message
+        const msg = inMsg.clone('where', 'inside F()');
+
+        // print at start of a function
+        logger.debug(msg.clone('what', 'start', 'args', args));
+
+        // print in the middle
+        logger.debug(msg.set('what', 'doing hard work'));
+
+        // and in the end
+        logger.debug(msg.set('what', 'result', 'result', {res: 'OK', error: null}));
+    }
+
+Pass a Message into a function call
+
+    F(msg, ...)
+
+## Message as a context
+As we see above adding more parameters to functions doesn't look good, alternative is calling functions with `function.call()`  
+We can pass a Message as **this** into function. For arrow functions we don't need that, they have all outer environment already.  
+And Message can just store data, without printing it because **all keys starting with _ are not printed**  
+
+    function F(...args) {
+        // we have a Message and still use it for logging, but instead of argument "inMsg" we use "this"
+        const msg = this.clone('where', 'inside F()');
+        logger.debug(msg);
+
+        // And we can get context variables
+        msg.get('_dateStarted')
+        msg.get('_dateExpired')
+        msg.get('_')
+    }
+
+    const msg = new Message('requestId', task.ID, '_dateStarted': new Date(), '_dateExpired': new Date(), '_': {anything});
+    F.call(msg, ...args);
+    // instead of F(...args);
+
+Of course you can use Message as a context passing it as an argument, often it will be the only right way.
+
+### Format
+Format for printing is used globally in Messages object, its a restriction but will make all application logs look same which isn't a bad idea.  
 Format object is
 
     {
@@ -26,14 +98,24 @@ Format object is
             name: "FIELD NAME",
             width: SPACE FOR A FIELD
         }, ...],
-        elasticWidth: BOOLEAN
+        elasticWidth: BOOLEAN,
+        positionalSeparator: "STRING",
+        otherSeparator: "STRING"
     }
-    
-Fields not mentioned in format are printed like this:
+
+Mentioned fields are positional and will be printed in order, according to format and without names, like this:
+
+    muid123456 funcCall() begin
+
+`format.positionalSeparator` is used to separate positional fields when `elasticWidth==false`, when `elasticWidth==true` space is used  
+
+Fields not mentioned in format are printed after positional fields like this:
 
     key1=val1 key2=val2 ...
 
-JSON.stringify() is applied to values
+`format.otherSeparator` is used to separate these fields  
+
+and JSON.stringify() is applied to all values except Errors, for them we print `.stack`
 
 ### Setting format
 
@@ -48,13 +130,15 @@ JSON.stringify() is applied to values
             name: 'what',
             width: 23
         }],
-        elasticWidth: true
+        elasticWidth: true,
+        positionalSeparator: '\t',
+        otherSeparator: ' '
     })
 
 That is actually a **default** format
 
 ### Space and elastic space
-Positional fields will go in strict order within reserved space and if space is not enough field can borrow some from left neighbor
+Positional fields will go in strict order within reserved space and if space is not enough field can borrow some from left neighbor  
 For example if format is:
 
     {
@@ -81,61 +165,6 @@ Then strings will be
     'this    is_short string k=v'
     'this   is_longer string k={"v":1}'
 
-## Usage
-For example, processing tasks it is important to print some ID
-Make initial Message at the start
-
-    const msg = new Message('requestId', task.ID)
-
-Print it
-
-    logger.debug(msg);
-
-Or print it with additional info
-
-    logger.debug(msg.clone('what', 'accepted');
-
-Later you can print it changing that info
-
-    logger.debug(msg.clone('what', 'processing');
-
-Call some functions and have task *context* in there  
-Pass a Message and add more data to it
-
-    function F(inMsg, ...args) {
-        // better don't change original Message
-        const msg = inMsg.clone('where', 'inside F()');
-
-        // print at start of a function
-        logger.debug(msg.clone('what', 'start', 'args', args));
-
-        // print in the middle
-        logger.debug(msg.set('what', 'processing'));
-
-        // and in the end
-        logger.debug(msg.set('what', 'result', 'result', {res: 'OK', error: null}));
-    }
-
-## Message as a context
-As we see above adding more parameters to functions doesn't look good, alternative is calling functions with `f.call()`  
-This way we can pass a Message into **this** in a function. For arrow functions we don't need that, we have all outer environment already.    
-And Message can just store data, without printing it, **all keys starting with _ are not printed**  
-
-    function F(...args) {
-        // we have a Message and still use it for logging
-        const msg = this.clone('where', 'inside F()');
-        logger.debug(msg);
-
-        // And we can get context variables
-        msg.get('_dateStarted')
-        msg.get('_dateExpired')
-        msg.get('_')
-    }
-
-    const msg = new Message('requestId', task.ID, '_dateStarted': new Date(), '_dateExpired': new Date(), '_': {anything});
-    F.call(msg, ...args);
-    // instead of F(...args);
-
 ## Benchmark
 Compared on my laptop to `console.log` it is slower but not dramatically `80,195 ops/sec VS 96,897 ops/sec`
 
@@ -161,4 +190,4 @@ Compared on my laptop to `console.log` it is slower but not dramatically `80,195
 
 ## More
 
-Check out **test** for details
+Check out [test](./test.js) and [example.js](./example.js) for more details
