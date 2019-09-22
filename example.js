@@ -37,7 +37,7 @@ const IntFactory = {
         logger.log(_msg.setm('what', 'OK', 'result', res));
         return res;
     },
-    
+
     getEven: function (msg) {
         if (!msg) msg = new Message();
         const _msg = msg.clone('where', 'getEven');
@@ -48,11 +48,17 @@ const IntFactory = {
     }
 };
 
-logger.log('IntFactory.getEven() with only 1 function call in stack:');
+logger.log('Example of Mesagges being used for logging');
+logger.log('You should see below a logs table with columns: something like call stack id, something that answers the question "where?", something for "what?" and rest data in a "key=value" form');
+logger.log('');
+
+logger.log('Case1: we call IntFactory.getEven() which results in only 1 function call in stack:');
 IntFactory.getEven();
 
-logger.log('\nIntFactory.getOdd() with 2 function calls in stack:');
+logger.log('');
+logger.log('Case2: we call IntFactory.getOdd() which results in 2 function calls in stack:');
 IntFactory.getOdd();
 
-logger.log('\nprintError()');
+logger.log('');
+logger.log('printError()');
 logger.log(new Message('where', 'printError', 'what', 'error', 'result', new Error('error message for example')));

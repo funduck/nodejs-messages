@@ -29,6 +29,35 @@ It is always easier to start with example, so run this to see how Message can be
 
     node example.js
 
+You will see
+
+```
+Example of Mesagges being used for logging
+You should see below a logs table with columns: something like call stack id, something that answers the question "where?", something for "what?" and rest data in a "key=value" form
+
+Case1: we call IntFactory.getEven() which results in only 1 function call in stack:
+	muid559445	getEven		
+	muid559445	getEven	OK	result=126
+
+Case2: we call IntFactory.getOdd() which results in 2 function calls in stack:
+	muid559446	getOdd		
+	muid559446	getEven		
+	muid559446	getEven	OK	result=126
+	muid559446	getOdd	OK	result=127
+
+printError()
+	muid559446	printError	error	result=Error: error message for example
+    at Object.<anonymous> (/home/oomilekh/dev/nodejs-messages/example.js:64:74)
+    at Module._compile (module.js:652:30)
+    at Object.Module._extensions..js (module.js:663:10)
+    at Module.load (module.js:565:32)
+    at tryModuleLoad (module.js:505:12)
+    at Function.Module._load (module.js:497:3)
+    at Function.Module.runMain (module.js:693:10)
+    at startup (bootstrap_node.js:188:16)
+    at bootstrap_node.js:609:3
+```
+
 ## Usage
 When processing any tasks usually you have some ID  
 Make initial Message at the start
